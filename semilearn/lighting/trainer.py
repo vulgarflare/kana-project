@@ -27,6 +27,56 @@ class Trainer:
         self.logger = get_logger(config.save_name, save_path=self.save_path, level="INFO")
 
 
+#     def fit(self, train_lb_loader, train_ulb_loader, eval_loader):
+#         self.algorithm.model.train()
+
+#         # EMA Init
+#         self.algorithm.ema = EMA(self.algorithm.model, self.algorithm.ema_m)
+#         self.algorithm.ema.register()
+
+#         # train
+#         self.algorithm.it = 0
+#         self.algorithm.best_eval_acc = 0.0
+#         self.algorithm.best_epoch = 0
+
+#         for epoch in range(self.config.epoch):
+#             self.algorithm.epoch = epoch
+#             print("Epoch: {}".format(epoch))
+#             if self.algorithm.it > self.config.num_train_iter:
+#                 break
+
+#             bar = Bar('Processing', max=len(train_lb_loader))
+
+#             self.algorithm.model.train()
+
+#             for data_lb, data_ulb in zip(train_lb_loader, train_ulb_loader):
+
+#                 if self.algorithm.it > self.config.num_train_iter:
+#                     break
+                
+#                 result = self.algorithm.train_step(**self.algorithm.process_batch(**data_lb, **data_ulb))
+
+#                 bar.suffix = ("Iter: {batch:4}/{iter:4}.".format(batch=self.algorithm.it, iter=len(train_lb_loader)))
+#                 bar.next()
+#                 self.algorithm.it += 1
+#             bar.finish()
+
+#             # validate
+#             result = self.evaluate(eval_loader)
+
+#             # save model
+#             self.algorithm.save_model('latest_model.pth', self.save_path)
+
+#             # best
+#             if result['acc'] > self.algorithm.best_eval_acc:
+#                 self.algorithm.best_eval_acc = result['acc']
+#                 self.algorithm.best_epoch = self.algorithm.epoch
+#                 self.algorithm.save_model('model_best.pth', self.save_path)
+        
+#         self.logger.info("Best acc {:.4f} at epoch {:d}".format(self.algorithm.best_eval_acc, self.algorithm.best_epoch))
+#         self.logger.info("Training finished.")
+
+#为了节省内存和保存loss，修改如下
     def fit(self, train_lb_loader, train_ulb_loader, eval_loader):
         self.algorithm.model.train()
 
@@ -39,6 +89,9 @@ class Trainer:
         self.algorithm.best_eval_acc = 0.0
         self.algorithm.best_epoch = 0
 
+        save_model = getattr(self.config, "save_model", True)
+        num_log_iter = getattr(self.config, "num_log_iter", 10)
+
         for epoch in range(self.config.epoch):
             self.algorithm.epoch = epoch
             print("Epoch: {}".format(epoch))
@@ -46,33 +99,43 @@ class Trainer:
                 break
 
             bar = Bar('Processing', max=len(train_lb_loader))
-
             self.algorithm.model.train()
 
             for data_lb, data_ulb in zip(train_lb_loader, train_ulb_loader):
-
                 if self.algorithm.it > self.config.num_train_iter:
                     break
-                
+
                 result = self.algorithm.train_step(**self.algorithm.process_batch(**data_lb, **data_ulb))
+
+                # 兼容两种返回：dict 或 (out_dict, log_dict)
+                if isinstance(result, tuple):
+                    _, log_dict = result
+                else:
+                    log_dict = {}
+
+                if log_dict and (self.algorithm.it % num_log_iter == 0):
+                    # log_dict 里已经是 train/xxx 格式
+                    log_str = " | ".join([f"{k}: {v:.4f}" for k, v in log_dict.items()])
+                    self.logger.info(f"Iter {self.algorithm.it}: {log_str}")
 
                 bar.suffix = ("Iter: {batch:4}/{iter:4}.".format(batch=self.algorithm.it, iter=len(train_lb_loader)))
                 bar.next()
                 self.algorithm.it += 1
+
             bar.finish()
 
             # validate
             result = self.evaluate(eval_loader)
 
-            # save model
-            self.algorithm.save_model('latest_model.pth', self.save_path)
+            # save model (optional)
+            if save_model:
+                self.algorithm.save_model('latest_model.pth', self.save_path)
 
-            # best
-            if result['acc'] > self.algorithm.best_eval_acc:
-                self.algorithm.best_eval_acc = result['acc']
-                self.algorithm.best_epoch = self.algorithm.epoch
-                self.algorithm.save_model('model_best.pth', self.save_path)
-        
+                if result['acc'] > self.algorithm.best_eval_acc:
+                    self.algorithm.best_eval_acc = result['acc']
+                    self.algorithm.best_epoch = self.algorithm.epoch
+                    self.algorithm.save_model('model_best.pth', self.save_path)
+
         self.logger.info("Best acc {:.4f} at epoch {:d}".format(self.algorithm.best_eval_acc, self.algorithm.best_epoch))
         self.logger.info("Training finished.")
 

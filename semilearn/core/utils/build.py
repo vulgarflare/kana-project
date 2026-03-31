@@ -96,6 +96,15 @@ def get_dataset(args, algorithm, dataset, num_labels, num_classes, data_dir='./d
     elif dataset in ["imagenet", "imagenet127"]:
         lb_dset, ulb_dset, eval_dset = get_imagenet(args, algorithm, dataset, num_labels, num_classes, data_dir=data_dir, include_lb_to_ulb=include_lb_to_ulb)
         test_dset = None
+    #Kanamycin dataset comes here!
+    elif dataset == "kana":
+        from semilearn.datasets.cv_datasets.kana import get_kana
+        lb_dset, ulb_dset, eval_dset = get_kana(
+            args, algorithm, dataset, num_labels, num_classes,
+            data_dir=data_dir,
+            include_lb_to_ulb=include_lb_to_ulb
+        )
+        test_dset = None
     # speech dataset
     elif dataset in ['esc50', 'fsdnoisy', 'gtzan', 'superbks', 'superbsi', 'urbansound8k']:
         lb_dset, ulb_dset, eval_dset, test_dset = get_pkl_dset(args, algorithm, dataset, num_labels, num_classes, data_dir=data_dir, include_lb_to_ulb=include_lb_to_ulb)

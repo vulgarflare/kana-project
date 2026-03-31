@@ -2,6 +2,10 @@
 # Licensed under the MIT License.
 
 from semilearn.core.utils import ALGORITHMS
+from semilearn.algorithms.fixmatch_Shape_Consistency_Loss import FixMatch_Shape_Consistency_Loss
+from semilearn.algorithms.fixmatch_Shape_Consistency_Loss_Overlay2Img import Fixmatch_Shape_Consistency_Loss_Overlay2Img
+from semilearn.algorithms.fixmatch_Overlay2Img import Fixmatch_Overlay2Img
+
 name2alg = ALGORITHMS
 
 def get_algorithm(args, net_builder, tb_log, logger):
